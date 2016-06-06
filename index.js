@@ -67,11 +67,18 @@ class IPCResponder {
         // Handle incoming request for topic:
         this.topicHandlers[topic](payload)
           .then((responsePayload) => {
-            event.sender.send(IPCResponderChannel, { id, payload: responsePayload })
+            event.sender.send(IPCResponderChannel, { id, error: false, payload: responsePayload })
+          })
+          .catch((error) => {
+            event.sender.send(IPCResponderChannel, {id, error: true, payload: error})
           })
       } else if (typeof (id) === 'string' && id.length > 0 && this.awaitingResponseHandlers[id] != null) {
         // Handle a response we are waiting for:
-        this.awaitingResponseHandlers[id].resolve(payload)
+        if (payload && payload.error) {
+          this.awaitingResponseHandlers[id].resolve(payload)
+        } else {
+          this.awaitingResponseHandlers[id].reject(payload)
+        }
         delete this.awaitingResponseHandlers[id]
       }
     })
